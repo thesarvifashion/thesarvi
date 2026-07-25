@@ -391,7 +391,7 @@ function initHeaderSearch() {
         let html = '';
         filtered.slice(0, 5).forEach(p => {
             html += `
-                <a href="product-detail.html?id=${p.id}" class="search-item">
+                <a href="javascript:void(0)" class="search-item">
                     <img src="${p.image}" alt="${p.name}">
                     <div class="search-item-info">
                         <h6>${p.name}</h6>
@@ -536,11 +536,11 @@ function renderBestSellers() {
                 <div class="prod-wish ${isWished ? 'is-active' : ''}" onclick="toggleWishlist('${p.id}', this)" title="Add to Wishlist">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 1 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z"/></svg>
                 </div>
-                <a href="product-detail.html?id=${p.id}" class="prod-img">
+                <a href="javascript:void(0)" class="prod-img">
                     <img src="${p.image}" alt="${p.name}">
                 </a>
                 <div class="prod-body">
-                    <a href="product-detail.html?id=${p.id}">
+                    <a href="javascript:void(0)">
                         <h4>${p.name}</h4>
                     </a>
                     <div class="prod-price">
