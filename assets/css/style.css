@@ -30,6 +30,28 @@
     box-sizing: border-box;
     margin: 0;
     padding: 0;
+    scrollbar-width: thin;
+    scrollbar-color: var(--maroon-deep) var(--cream-2);
+}
+
+/* Custom Luxury Brand Scrollbar (Chrome, Edge, Safari, Opera) */
+::-webkit-scrollbar {
+    width: 7px;
+    height: 7px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--cream-2);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--maroon-deep);
+    border-radius: 10px;
+    border: 1px solid var(--cream-2);
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--maroon);
 }
 
 html {
