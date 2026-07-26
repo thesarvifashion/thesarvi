@@ -79,7 +79,7 @@ const THE_SARVI_PRODUCTS = [
         oldPrice: 2699,
         rating: 5.0,
         reviewsCount: 64,
-        badge: "20% OFF",
+        badge: "Premium",
         image: "assets/images/products/prod-premium-ring-set.jpg",
         description: "A gorgeous trio of stackable statement rings featuring a full eternity band, a solitaire sparkle crown, and a textured twist band. Wear them stacked together for bold opulence or individually for effortless daily grace.",
         specs: {

@@ -1,19 +1,18 @@
 /* ==========================================================================
    THE SARVI · FASHION - CORE JAVASCRIPT CONTROLLER
-   Cart, Wishlist, WhatsApp Order Checkout, Google Sheets Sync & UI Logic
+   Cart, WhatsApp Order Checkout, Contact Inquiry, Drawers & UI Logic
    ========================================================================== */
 
 // Global Configuration
 window.CONFIG = {
-    WHATSAPP_NUMBER: "919876543210", // Client store WhatsApp number
+    WHATSAPP_NUMBER: "919461479704", // Client store WhatsApp number (+91 94614 79704)
     STORE_NAME: "THE SARVI · FASHION",
     CURRENCY: "₹",
-    GOOGLE_SHEET_WEBHOOK_URL: "" // Can be set by client when they share Google Apps Script URL
+    GOOGLE_SHEET_WEBHOOK_URL: "" // Optional Google Apps Script webhook URL
 };
 
 // State Management
 let sarviCart = JSON.parse(localStorage.getItem('theSarviCart')) || [];
-let sarviWishlist = JSON.parse(localStorage.getItem('theSarviWishlist')) || [];
 
 document.addEventListener('DOMContentLoaded', () => {
     initHeaderSearch();
@@ -25,7 +24,6 @@ document.addEventListener('DOMContentLoaded', () => {
     renderBestSellers();
     updateBadgeCounts();
     renderCartItems();
-    renderWishlistItems();
 
     // Check sticky header on scroll
     window.addEventListener('scroll', () => {
@@ -41,9 +39,10 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 /* ==========================================================================
-   1. SHOPPING CART & WISHLIST LOGIC
+   1. SHOPPING CART LOGIC
    ========================================================================== */
 function addToCart(productId, qty = 1) {
+    if (typeof THE_SARVI_PRODUCTS === 'undefined') return;
     const product = THE_SARVI_PRODUCTS.find(p => p.id === productId);
     if (!product) return;
 
@@ -63,7 +62,7 @@ function addToCart(productId, qty = 1) {
     saveCart();
     updateBadgeCounts();
     renderCartItems();
-    showToast(`Added "${product.name}" to Cart! 🛍️`);
+    showToast(`Added "${product.name}" to Bag! 🛍️`);
     openCartDrawer();
 }
 
@@ -72,7 +71,7 @@ function removeFromCart(productId) {
     saveCart();
     updateBadgeCounts();
     renderCartItems();
-    showToast("Item removed from cart");
+    showToast("Item removed from bag");
 }
 
 function updateCartQty(productId, delta) {
@@ -93,57 +92,37 @@ function saveCart() {
     localStorage.setItem('theSarviCart', JSON.stringify(sarviCart));
 }
 
-function toggleWishlist(productId, btnElement = null) {
-    const product = THE_SARVI_PRODUCTS.find(p => p.id === productId);
-    if (!product) return;
-
-    const index = sarviWishlist.findIndex(item => item.id === productId);
-    if (index > -1) {
-        sarviWishlist.splice(index, 1);
-        if (btnElement) btnElement.classList.remove('is-active');
-        showToast(`Removed from Wishlist`);
-    } else {
-        sarviWishlist.push({
-            id: product.id,
-            name: product.name,
-            price: product.price,
-            image: product.image
-        });
-        if (btnElement) btnElement.classList.add('is-active');
-        showToast(`Added "${product.name}" to Wishlist! ❤️`);
-    }
-
-    localStorage.setItem('theSarviWishlist', JSON.stringify(sarviWishlist));
-    updateBadgeCounts();
-    renderWishlistItems();
-}
-
 function updateBadgeCounts() {
     const cartBadge = document.getElementById('cartBadge');
-    const wishBadge = document.getElementById('wishBadge');
-
     const totalCartQty = sarviCart.reduce((sum, item) => sum + item.qty, 0);
+
     if (cartBadge) {
         cartBadge.textContent = totalCartQty;
         cartBadge.classList.add('pulse');
         setTimeout(() => cartBadge.classList.remove('pulse'), 300);
     }
-
-    if (wishBadge) {
-        wishBadge.textContent = sarviWishlist.length;
-        wishBadge.classList.add('pulse');
-        setTimeout(() => wishBadge.classList.remove('pulse'), 300);
-    }
 }
 
 function renderCartItems() {
     const container = document.getElementById('cartDrawerBody');
-    const totalEl = document.getElementById('cartTotalAmount');
+    const subtotalEl = document.getElementById('cartSubtotal');
+    const headCountEl = document.getElementById('cartCountHead');
+    const checkoutTotalEl = document.getElementById('checkoutTotalPayable');
+
+    const totalQty = sarviCart.reduce((sum, item) => sum + item.qty, 0);
+    if (headCountEl) headCountEl.textContent = totalQty;
+
     if (!container) return;
 
     if (sarviCart.length === 0) {
-        container.innerHTML = `<div class="drawer-empty">Your shopping bag is currently empty.<br><br><a href="#bestsellers" onclick="closeDrawers()" class="btn btn-outline" style="font-size:0.75rem;">Start Shopping</a></div>`;
-        if (totalEl) totalEl.textContent = `${window.CONFIG.CURRENCY}0`;
+        container.innerHTML = `
+            <div class="drawer-empty">
+                Your shopping bag is currently empty.<br><br>
+                <a href="shop.html" onclick="closeDrawers()" class="btn btn-outline" style="font-size:0.75rem;">Start Shopping</a>
+            </div>
+        `;
+        if (subtotalEl) subtotalEl.textContent = `${window.CONFIG.CURRENCY}0`;
+        if (checkoutTotalEl) checkoutTotalEl.textContent = `${window.CONFIG.CURRENCY}0`;
         return;
     }
 
@@ -160,125 +139,119 @@ function renderCartItems() {
                     <h5>${item.name}</h5>
                     <div class="price">${window.CONFIG.CURRENCY}${item.price.toLocaleString()}</div>
                     <div class="drawer-qty">
-                        <button onclick="updateCartQty('${item.id}', -1)">-</button>
+                        <button type="button" onclick="updateCartQty('${item.id}', -1)">-</button>
                         <span>${item.qty}</span>
-                        <button onclick="updateCartQty('${item.id}', 1)">+</button>
+                        <button type="button" onclick="updateCartQty('${item.id}', 1)">+</button>
                     </div>
-                    <button class="drawer-remove" onclick="removeFromCart('${item.id}')">Remove</button>
+                    <button type="button" class="drawer-remove" onclick="removeFromCart('${item.id}')">Remove</button>
                 </div>
             </div>
         `;
     });
 
     container.innerHTML = html;
-    if (totalEl) totalEl.textContent = `${window.CONFIG.CURRENCY}${total.toLocaleString()}`;
-}
-
-function renderWishlistItems() {
-    const container = document.getElementById('wishlistDrawerBody');
-    if (!container) return;
-
-    if (sarviWishlist.length === 0) {
-        container.innerHTML = `<div class="drawer-empty">Your wishlist is empty.<br>Click the heart icon on products to save them here!</div>`;
-        return;
-    }
-
-    let html = '';
-    sarviWishlist.forEach(item => {
-        html += `
-            <div class="drawer-item">
-                <img src="${item.image}" alt="${item.name}">
-                <div class="drawer-item-info">
-                    <h5>${item.name}</h5>
-                    <div class="price">${window.CONFIG.CURRENCY}${item.price.toLocaleString()}</div>
-                    <button class="btn btn-fill" style="padding:6px 14px; font-size:0.7rem; margin-top:8px;" onclick="addToCart('${item.id}'); toggleWishlist('${item.id}')">Move to Cart</button>
-                    <button class="drawer-remove" onclick="toggleWishlist('${item.id}')">Remove</button>
-                </div>
-            </div>
-        `;
-    });
-
-    container.innerHTML = html;
+    if (subtotalEl) subtotalEl.textContent = `${window.CONFIG.CURRENCY}${total.toLocaleString()}`;
+    if (checkoutTotalEl) checkoutTotalEl.textContent = `${window.CONFIG.CURRENCY}${total.toLocaleString()}`;
 }
 
 /* ==========================================================================
-   2. SLIDE-OVER DRAWERS & MODALS
+   2. SLIDE-OVER DRAWERS & OVERLAYS
    ========================================================================== */
+function getOverlayElement() {
+    return document.getElementById('overlay') || 
+           document.getElementById('drawerOverlay') || 
+           document.querySelector('.overlay') || 
+           document.querySelector('.drawer-overlay');
+}
+
 function initDrawers() {
-    const overlay = document.getElementById('drawerOverlay');
+    const overlay = getOverlayElement();
     if (overlay) {
         overlay.addEventListener('click', closeDrawers);
     }
 }
 
 function openCartDrawer() {
-    const overlay = document.getElementById('drawerOverlay');
+    const overlay = getOverlayElement();
     const drawer = document.getElementById('cartDrawer');
-    if (overlay && drawer) {
-        overlay.classList.add('is-open');
-        drawer.classList.add('is-open');
-    }
-}
-
-function openWishlistDrawer() {
-    const overlay = document.getElementById('drawerOverlay');
-    const drawer = document.getElementById('wishlistDrawer');
-    if (overlay && drawer) {
-        overlay.classList.add('is-open');
-        drawer.classList.add('is-open');
-    }
+    if (overlay) overlay.classList.add('is-open');
+    if (drawer) drawer.classList.add('is-open');
 }
 
 function closeDrawers() {
-    const overlay = document.getElementById('drawerOverlay');
+    const overlay = getOverlayElement();
     const cartDrawer = document.getElementById('cartDrawer');
-    const wishDrawer = document.getElementById('wishlistDrawer');
+    const mobileNav = document.getElementById('mobileNav') || document.getElementById('mobileNavDrawer');
     if (overlay) overlay.classList.remove('is-open');
     if (cartDrawer) cartDrawer.classList.remove('is-open');
-    if (wishDrawer) wishDrawer.classList.remove('is-open');
+    if (mobileNav) mobileNav.classList.remove('is-open');
 }
 
 /* ==========================================================================
-   3. DUAL ORDER CHECKOUT (WHATSAPP + GOOGLE SHEETS)
+   3. MOBILE NAVIGATION DRAWER
    ========================================================================== */
-function proceedToWhatsAppCheckout() {
-    if (sarviCart.length === 0) {
-        showToast("Your cart is empty! Please add items first.");
-        return;
-    }
+function initMobileNav() {
+    const burger = document.getElementById('burgerBtn');
+    const closeBtn = document.getElementById('mobileNavClose');
 
-    // Check if we are on checkout page or opening modal
-    const modal = document.getElementById('checkoutModal');
-    if (modal) {
-        closeDrawers();
-        modal.classList.add('is-open');
-        renderCheckoutSummary();
-    } else {
-        window.location.href = "checkout.html";
+    if (burger) burger.addEventListener('click', openMobileNav);
+    if (closeBtn) closeBtn.addEventListener('click', closeMobileNav);
+}
+
+function openMobileNav() {
+    const overlay = getOverlayElement();
+    const nav = document.getElementById('mobileNav') || document.getElementById('mobileNavDrawer');
+    if (overlay) overlay.classList.add('is-open');
+    if (nav) nav.classList.add('is-open');
+}
+
+function closeMobileNav() {
+    closeDrawers();
+}
+
+/* ==========================================================================
+   4. MODALS & CHECKOUT HANDLERS
+   ========================================================================== */
+function initModals() {
+    const closeBtns = document.querySelectorAll('.modal-close');
+    closeBtns.forEach(btn => btn.addEventListener('click', closeModals));
+
+    const checkoutModal = document.getElementById('checkoutModal');
+    if (checkoutModal) {
+        checkoutModal.addEventListener('click', (e) => {
+            if (e.target === checkoutModal) closeModals();
+        });
     }
 }
 
-function renderCheckoutSummary() {
-    const container = document.getElementById('modalOrderSummary');
-    if (!container) return;
+function openCheckoutModal() {
+    if (sarviCart.length === 0) {
+        showToast("Your shopping bag is empty!");
+        return;
+    }
+    closeDrawers();
 
-    let total = 0;
-    let html = '<ul style="margin-bottom:14px;">';
-    sarviCart.forEach(item => {
-        const subtotal = item.price * item.qty;
-        total += subtotal;
-        html += `<li style="display:flex; justify-content:space-between; font-size:0.9rem; margin-bottom:6px;">
-            <span><b>${item.qty}x</b> ${item.name}</span>
-            <span>${window.CONFIG.CURRENCY}${subtotal.toLocaleString()}</span>
-        </li>`;
-    });
-    html += '</ul>';
-    html += `<div style="border-top:1px solid var(--line); padding-top:10px; display:flex; justify-content:space-between; font-size:1.1rem; color:var(--maroon-deep); font-weight:600;">
-        <span>Total Payable:</span>
-        <span>${window.CONFIG.CURRENCY}${total.toLocaleString()}</span>
-    </div>`;
+    const total = sarviCart.reduce((sum, item) => sum + (item.price * item.qty), 0);
+    const checkoutTotalEl = document.getElementById('checkoutTotalPayable');
+    if (checkoutTotalEl) checkoutTotalEl.textContent = `${window.CONFIG.CURRENCY}${total.toLocaleString()}`;
 
-    container.innerHTML = html;
+    const modal = document.getElementById('checkoutModal');
+    if (modal) modal.classList.add('is-open');
+}
+
+function closeModals() {
+    document.querySelectorAll('.modal').forEach(m => m.classList.remove('is-open'));
+}
+
+function togglePaymentNotice(value) {
+    const notice = document.getElementById('qrNotice');
+    if (notice) {
+        notice.style.display = (value === 'QR' || value === 'UPI') ? 'block' : 'none';
+    }
+}
+
+function handleCheckout(event) {
+    submitWhatsAppOrder(event);
 }
 
 function submitWhatsAppOrder(event) {
@@ -286,12 +259,11 @@ function submitWhatsAppOrder(event) {
 
     const name = document.getElementById('custName')?.value.trim() || 'Customer';
     const phone = document.getElementById('custPhone')?.value.trim() || 'Not provided';
-    const address = document.getElementById('custAddress')?.value.trim() || 'Direct Pickup/Inquiry';
-    const payment = document.querySelector('input[name="paymentMethod"]:checked')?.value || 'Direct WhatsApp';
-    const notes = document.getElementById('custNotes')?.value.trim() || 'None';
+    const address = document.getElementById('custAddress')?.value.trim() || 'Direct Pickup';
+    const payment = document.getElementById('custPayment')?.value || 'COD';
 
     if (sarviCart.length === 0) {
-        showToast("Your cart is empty!");
+        showToast("Your bag is empty!");
         return;
     }
 
@@ -303,53 +275,27 @@ function submitWhatsAppOrder(event) {
         itemsText += `${idx + 1}. *${item.name}* (Qty: ${item.qty}) - ₹${subtotal.toLocaleString()}\n`;
     });
 
-    // 1. Prepare Google Sheets JSON Data
-    const orderData = {
-        orderId: "TS-" + Math.floor(100000 + Math.random() * 900000),
-        timestamp: new Date().toLocaleString(),
-        customerName: name,
-        customerPhone: phone,
-        customerAddress: address,
-        paymentMethod: payment,
-        orderNotes: notes,
-        itemsCount: sarviCart.reduce((sum, i) => sum + i.qty, 0),
-        totalAmount: total,
-        itemsList: sarviCart.map(i => `${i.name} (${i.qty})`).join(", ")
-    };
-
-    // Send to Google Sheets Webhook if configured
-    if (window.CONFIG.GOOGLE_SHEET_WEBHOOK_URL) {
-        fetch(window.CONFIG.GOOGLE_SHEET_WEBHOOK_URL, {
-            method: 'POST',
-            mode: 'no-cors',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(orderData)
-        }).catch(err => console.log('Google Sheets Sync Note:', err));
-    }
-
-    // 2. Format WhatsApp Message
-    const waText = `🛍️ *NEW ORDER - ${window.CONFIG.STORE_NAME}* ✦\n` +
+    const orderId = "TS-" + Math.floor(100000 + Math.random() * 900000);
+    const waText = `🛍️ *NEW ORDER - ${window.CONFIG.STORE_NAME}*\n` +
                    `==============================\n` +
-                   `*Order ID:* ${orderData.orderId}\n` +
+                   `*Order Reference:* #${orderId}\n` +
                    `------------------------------\n` +
                    `*👤 Customer Details:*\n` +
                    `• Name: ${name}\n` +
-                   `• Phone: ${phone}\n` +
-                   `• Delivery Address: ${address}\n` +
+                   `• Phone (WhatsApp): ${phone}\n` +
+                   `• Address: ${address}\n` +
                    `• Payment Method: *${payment}*\n` +
-                   (notes !== 'None' ? `• Notes: ${notes}\n` : '') +
                    `------------------------------\n` +
-                   `*📦 Order Items:*\n` +
+                   `*📦 Items Ordered:*\n` +
                    itemsText +
                    `------------------------------\n` +
-                   `*💰 Total Payable:* *₹${total.toLocaleString()}*\n` +
+                   `*💰 Total Amount Payable:* *₹${total.toLocaleString()}*\n` +
                    `==============================\n` +
-                   `_Please confirm my order details and share delivery updates! Thank you._ ✨`;
+                   `_Please confirm my order and share delivery tracking updates! Thank you._ ✨`;
 
-    const encodedText = encodeURIComponent(waText);
-    const waUrl = `https://api.whatsapp.com/send?phone=${window.CONFIG.WHATSAPP_NUMBER}&text=${encodedText}`;
+    const waUrl = `https://api.whatsapp.com/send?phone=${window.CONFIG.WHATSAPP_NUMBER}&text=${encodeURIComponent(waText)}`;
 
-    showToast("Opening WhatsApp with your order details! 🚀");
+    showToast("Opening WhatsApp to place your order! 🚀");
     setTimeout(() => {
         window.open(waUrl, '_blank');
         sarviCart = [];
@@ -357,11 +303,42 @@ function submitWhatsAppOrder(event) {
         updateBadgeCounts();
         renderCartItems();
         closeModals();
-    }, 800);
+    }, 600);
 }
 
 /* ==========================================================================
-   4. LIVE SEARCH & FILTERING
+   5. CONTACT FORM WHATSAPP INQUIRY
+   ========================================================================== */
+function sendContactWhatsApp() {
+    const name = document.getElementById('conName')?.value.trim() || 'Customer';
+    const phone = document.getElementById('conPhone')?.value.trim() || 'Not provided';
+    const topic = document.getElementById('conTopic')?.value || 'General Inquiry';
+    const msg = document.getElementById('conMsg')?.value.trim() || '';
+
+    if (!name || !msg) {
+        showToast("Please fill in your name and message.");
+        return;
+    }
+
+    const waText = `💬 *CUSTOMER SUPPORT INQUIRY - ${window.CONFIG.STORE_NAME}*\n` +
+                   `==============================\n` +
+                   `*Name:* ${name}\n` +
+                   `*Phone:* ${phone}\n` +
+                   `*Topic:* ${topic}\n` +
+                   `------------------------------\n` +
+                   `*Message:*\n${msg}\n` +
+                   `==============================`;
+
+    const waUrl = `https://api.whatsapp.com/send?phone=${window.CONFIG.WHATSAPP_NUMBER}&text=${encodeURIComponent(waText)}`;
+
+    showToast("Redirecting to WhatsApp Support... 💬");
+    setTimeout(() => {
+        window.open(waUrl, '_blank');
+    }, 500);
+}
+
+/* ==========================================================================
+   6. LIVE HEADER SEARCH
    ========================================================================== */
 function initHeaderSearch() {
     const searchInput = document.getElementById('headerSearchInput');
@@ -376,6 +353,8 @@ function initHeaderSearch() {
             return;
         }
 
+        if (typeof THE_SARVI_PRODUCTS === 'undefined') return;
+
         const filtered = THE_SARVI_PRODUCTS.filter(p => 
             p.name.toLowerCase().includes(query) || 
             p.category.toLowerCase().includes(query) ||
@@ -383,7 +362,7 @@ function initHeaderSearch() {
         );
 
         if (filtered.length === 0) {
-            dropdown.innerHTML = `<div style="padding:14px; text-align:center; color:var(--ink-soft); font-size:0.88rem;">No jewelry matches "${query}". Try "Necklace" or "Crystal"</div>`;
+            dropdown.innerHTML = `<div style="padding:14px; text-align:center; color:var(--ink-soft); font-size:0.88rem;">No jewellery matches "${query}". Try "Necklace" or "Crystal"</div>`;
             dropdown.classList.add('is-active');
             return;
         }
@@ -391,7 +370,7 @@ function initHeaderSearch() {
         let html = '';
         filtered.slice(0, 5).forEach(p => {
             html += `
-                <a href="javascript:void(0)" class="search-item">
+                <a href="shop.html?category=${p.category}" class="search-item">
                     <img src="${p.image}" alt="${p.name}">
                     <div class="search-item-info">
                         <h6>${p.name}</h6>
@@ -413,7 +392,7 @@ function initHeaderSearch() {
 }
 
 /* ==========================================================================
-   5. HERO SLIDER CONTROLLER
+   7. HERO SLIDER CONTROLLER
    ========================================================================== */
 let currentSlide = 0;
 let slideInterval;
@@ -455,7 +434,7 @@ function initHeroSlider() {
 }
 
 /* ==========================================================================
-   6. TESTIMONIALS CAROUSEL
+   8. TESTIMONIALS CAROUSEL
    ========================================================================== */
 const TESTIMONIALS_DATA = [
     {
@@ -519,35 +498,32 @@ function renderTestimonialSlide() {
 }
 
 /* ==========================================================================
-   7. RENDER BEST SELLERS ON HOMEPAGE
+   9. RENDER BEST SELLERS ON HOMEPAGE
    ========================================================================== */
 function renderBestSellers() {
     const grid = document.getElementById('bestSellersGrid');
     if (!grid) return;
+    if (typeof THE_SARVI_PRODUCTS === 'undefined') return;
 
     const bestSellers = THE_SARVI_PRODUCTS.filter(p => p.bestSeller).slice(0, 4);
     let html = '';
 
     bestSellers.forEach(p => {
-        const isWished = sarviWishlist.some(w => w.id === p.id);
         html += `
             <div class="prod-card">
                 ${p.badge ? `<span class="prod-tag">${p.badge}</span>` : ''}
-                <div class="prod-wish ${isWished ? 'is-active' : ''}" onclick="toggleWishlist('${p.id}', this)" title="Add to Wishlist">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 1 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z"/></svg>
-                </div>
-                <a href="javascript:void(0)" class="prod-img">
+                <a href="shop.html?category=${p.category}" class="prod-img">
                     <img src="${p.image}" alt="${p.name}">
                 </a>
                 <div class="prod-body">
-                    <a href="javascript:void(0)">
+                    <a href="shop.html?category=${p.category}">
                         <h4>${p.name}</h4>
                     </a>
                     <div class="prod-price">
                         <span class="now">${window.CONFIG.CURRENCY}${p.price.toLocaleString()}</span>
                         ${p.oldPrice ? `<span class="was">${window.CONFIG.CURRENCY}${p.oldPrice.toLocaleString()}</span>` : ''}
                     </div>
-                    <button class="prod-cta" onclick="addToCart('${p.id}')">Add To Cart</button>
+                    <button class="prod-cta" onclick="addToCart('${p.id}')">Add To Bag</button>
                 </div>
             </div>
         `;
@@ -557,74 +533,8 @@ function renderBestSellers() {
 }
 
 /* ==========================================================================
-   8. MODALS, MOBILE NAV & TOAST NOTIFICATION
+   10. TOAST NOTIFICATION SYSTEM
    ========================================================================== */
-function initModals() {
-    const closeBtns = document.querySelectorAll('.modal-close');
-    closeBtns.forEach(btn => btn.addEventListener('click', closeModals));
-
-    const modalOverlay = document.getElementById('checkoutModal');
-    if (modalOverlay) {
-        modalOverlay.addEventListener('click', (e) => {
-            if (e.target === modalOverlay) closeModals();
-        });
-    }
-}
-
-function closeModals() {
-    document.querySelectorAll('.modal-overlay').forEach(m => m.classList.remove('is-open'));
-}
-
-function openUPIScanModal() {
-    const modal = document.getElementById('upiScanModal');
-    const totalEl = document.getElementById('upiModalAmount');
-    if (modal && totalEl) {
-        const total = sarviCart.reduce((sum, i) => sum + (i.price * i.qty), 0);
-        totalEl.textContent = `Payable: ₹${total.toLocaleString()}`;
-        modal.classList.add('is-open');
-    }
-}
-
-function initMobileNav() {
-    const burger = document.getElementById('burgerBtn');
-    const drawer = document.getElementById('mobileNavDrawer');
-    const overlay = document.getElementById('drawerOverlay');
-    const closeBtn = document.getElementById('mobileNavClose');
-
-    if (burger) {
-        burger.addEventListener('click', openMobileNav);
-    }
-    if (closeBtn) {
-        closeBtn.addEventListener('click', closeMobileNav);
-    }
-}
-
-function openMobileNav() {
-    const overlay = document.getElementById('drawerOverlay');
-    const drawer = document.getElementById('mobileNavDrawer');
-    if (overlay && drawer) {
-        overlay.classList.add('is-open');
-        drawer.classList.add('is-open');
-    }
-}
-
-function closeMobileNav() {
-    const overlay = document.getElementById('drawerOverlay');
-    const drawer = document.getElementById('mobileNavDrawer');
-    if (drawer) drawer.classList.remove('is-open');
-    if (overlay && !document.getElementById('cartDrawer')?.classList.contains('is-open') && !document.getElementById('wishlistDrawer')?.classList.contains('is-open')) {
-        overlay.classList.remove('is-open');
-    }
-}
-
-// Ensure overlay click also closes mobile nav
-const originalCloseDrawers = closeDrawers;
-closeDrawers = function() {
-    originalCloseDrawers();
-    const mobileDrawer = document.getElementById('mobileNavDrawer');
-    if (mobileDrawer) mobileDrawer.classList.remove('is-open');
-};
-
 function showToast(message) {
     let toast = document.getElementById('sarviToast');
     if (!toast) {
