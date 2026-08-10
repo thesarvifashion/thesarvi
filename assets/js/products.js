@@ -7,7 +7,7 @@ const THE_SARVI_PRODUCTS = [
     {
         id: "TS-NK-001",
         name: "Rose Gold Necklace",
-        category: "jewellery",
+        category: "neckpeace",
         subcategory: "necklaces",
         price: 1299,
         oldPrice: 2999,
@@ -29,7 +29,7 @@ const THE_SARVI_PRODUCTS = [
     {
         id: "TS-ER-002",
         name: "Wine Crystal Earrings",
-        category: "jewellery",
+        category: "earing",
         subcategory: "earrings",
         price: 1199,
         oldPrice: 1899,
@@ -51,7 +51,7 @@ const THE_SARVI_PRODUCTS = [
     {
         id: "TS-BR-003",
         name: "Korean Crystal Bracelet",
-        category: "korean",
+        category: "bracelt",
         subcategory: "bracelets",
         price: 1499,
         oldPrice: 2199,
@@ -73,7 +73,7 @@ const THE_SARVI_PRODUCTS = [
     {
         id: "TS-RG-004",
         name: "Premium Ring Set",
-        category: "jewellery",
+        category: "ring",
         subcategory: "rings",
         price: 1399,
         oldPrice: 2699,
@@ -95,8 +95,8 @@ const THE_SARVI_PRODUCTS = [
     {
         id: "TS-NK-005",
         name: "Royal Emerald Cut Pendant",
-        category: "jewellery",
-        subcategory: "necklaces",
+        category: "earing",
+        subcategory: "earrings",
         price: 1899,
         oldPrice: 3499,
         rating: 4.9,
@@ -117,7 +117,7 @@ const THE_SARVI_PRODUCTS = [
     {
         id: "TS-BR-006",
         name: "Crystal Cuff Bracelet",
-        category: "fashion",
+        category: "bracelt",
         subcategory: "bracelets",
         price: 1699,
         oldPrice: 2899,
@@ -139,7 +139,7 @@ const THE_SARVI_PRODUCTS = [
     {
         id: "TS-ER-007",
         name: "Pearl & Crystal Drop Earrings",
-        category: "jewellery",
+        category: "ring",
         subcategory: "earrings",
         price: 1349,
         oldPrice: 2299,
@@ -161,7 +161,7 @@ const THE_SARVI_PRODUCTS = [
     {
         id: "TS-GS-008",
         name: "Diamond Tennis Choker Set",
-        category: "giftsets",
+        category: "bracelt",
         subcategory: "sets",
         price: 2499,
         oldPrice: 4999,

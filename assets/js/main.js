@@ -5,7 +5,7 @@
 
 // Global Configuration
 window.CONFIG = {
-    WHATSAPP_NUMBER: "919461479704", // Client store WhatsApp number (+91 94614 79704)
+    WHATSAPP_NUMBER: "918769112281", // Client store WhatsApp number (+91 87691 12281)
     STORE_NAME: "THE SARVI · FASHION",
     CURRENCY: "₹",
     GOOGLE_SHEET_WEBHOOK_URL: "" // Optional Google Apps Script webhook URL
@@ -269,13 +269,43 @@ function submitWhatsAppOrder(event) {
 
     let total = 0;
     let itemsText = '';
+    let itemsCleanList = [];
     sarviCart.forEach((item, idx) => {
         const subtotal = item.price * item.qty;
         total += subtotal;
         itemsText += `${idx + 1}. *${item.name}* (Qty: ${item.qty}) - ₹${subtotal.toLocaleString()}\n`;
+        itemsCleanList.push(`${item.name} x${item.qty} (₹${subtotal})`);
     });
 
     const orderId = "TS-" + Math.floor(100000 + Math.random() * 900000);
+    const timeStamp = new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" });
+
+    // Send order data to Google Sheets (if URL configured)
+    if (window.CONFIG.GOOGLE_SHEETS_URL && window.CONFIG.GOOGLE_SHEETS_URL !== "YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL_HERE") {
+        const orderPayload = {
+            action: "order",
+            timestamp: timeStamp,
+            orderId: "#" + orderId,
+            name: name,
+            phone: phone,
+            address: address,
+            payment: payment,
+            items: itemsCleanList.join(" | "),
+            total: `₹${total.toLocaleString()}`
+        };
+
+        try {
+            fetch(window.CONFIG.GOOGLE_SHEETS_URL, {
+                method: "POST",
+                mode: "no-cors",
+                headers: { "Content-Type": "text/plain" },
+                body: JSON.stringify(orderPayload)
+            }).catch(err => console.log("Google Sheets sync error:", err));
+        } catch (e) {
+            console.log("Google Sheets submission error:", e);
+        }
+    }
+
     const waText = `🛍️ *NEW ORDER - ${window.CONFIG.STORE_NAME}*\n` +
                    `==============================\n` +
                    `*Order Reference:* #${orderId}\n` +
@@ -295,7 +325,7 @@ function submitWhatsAppOrder(event) {
 
     const waUrl = `https://api.whatsapp.com/send?phone=${window.CONFIG.WHATSAPP_NUMBER}&text=${encodeURIComponent(waText)}`;
 
-    showToast("Opening WhatsApp to place your order! 🚀");
+    showToast("Processing Order & Opening WhatsApp... 🚀");
     setTimeout(() => {
         window.open(waUrl, '_blank');
         sarviCart = [];
@@ -307,17 +337,49 @@ function submitWhatsAppOrder(event) {
 }
 
 /* ==========================================================================
-   5. CONTACT FORM WHATSAPP INQUIRY
+   5. CONTACT FORM WHATSAPP & GOOGLE SHEETS INQUIRY
    ========================================================================== */
-function sendContactWhatsApp() {
-    const name = document.getElementById('conName')?.value.trim() || 'Customer';
-    const phone = document.getElementById('conPhone')?.value.trim() || 'Not provided';
-    const topic = document.getElementById('conTopic')?.value || 'General Inquiry';
-    const msg = document.getElementById('conMsg')?.value.trim() || '';
+function sendContactWhatsApp(event) {
+    if (event) event.preventDefault();
+
+    const nameEl = document.getElementById('conName');
+    const phoneEl = document.getElementById('conPhone');
+    const topicEl = document.getElementById('conTopic');
+    const msgEl = document.getElementById('conMsg');
+
+    const name = nameEl?.value.trim() || 'Customer';
+    const phone = phoneEl?.value.trim() || 'Not provided';
+    const topic = topicEl?.value || 'General Inquiry';
+    const msg = msgEl?.value.trim() || '';
 
     if (!name || !msg) {
         showToast("Please fill in your name and message.");
         return;
+    }
+
+    const timeStamp = new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" });
+
+    // Send contact form data to Google Sheets (if URL configured)
+    if (window.CONFIG.GOOGLE_SHEETS_URL && window.CONFIG.GOOGLE_SHEETS_URL !== "YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL_HERE") {
+        const contactPayload = {
+            action: "contact",
+            timestamp: timeStamp,
+            name: name,
+            phone: phone,
+            topic: topic,
+            message: msg
+        };
+
+        try {
+            fetch(window.CONFIG.GOOGLE_SHEETS_URL, {
+                method: "POST",
+                mode: "no-cors",
+                headers: { "Content-Type": "text/plain" },
+                body: JSON.stringify(contactPayload)
+            }).catch(err => console.log("Google Sheets contact sync error:", err));
+        } catch (e) {
+            console.log("Google Sheets contact submission error:", e);
+        }
     }
 
     const waText = `💬 *CUSTOMER SUPPORT INQUIRY - ${window.CONFIG.STORE_NAME}*\n` +
@@ -331,10 +393,14 @@ function sendContactWhatsApp() {
 
     const waUrl = `https://api.whatsapp.com/send?phone=${window.CONFIG.WHATSAPP_NUMBER}&text=${encodeURIComponent(waText)}`;
 
-    showToast("Redirecting to WhatsApp Support... 💬");
+    showToast("Thank you! Inquiry submitted successfully. ✨");
+    if (nameEl) nameEl.value = '';
+    if (phoneEl) phoneEl.value = '';
+    if (msgEl) msgEl.value = '';
+
     setTimeout(() => {
         window.open(waUrl, '_blank');
-    }, 500);
+    }, 600);
 }
 
 /* ==========================================================================
