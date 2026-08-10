@@ -8,7 +8,7 @@ window.CONFIG = {
     WHATSAPP_NUMBER: "918769112281", // Client store WhatsApp number (+91 87691 12281)
     STORE_NAME: "THE SARVI · FASHION",
     CURRENCY: "₹",
-    GOOGLE_SHEET_WEBHOOK_URL: "" // Optional Google Apps Script webhook URL
+    GOOGLE_SHEETS_URL: "https://script.google.com/macros/s/AKfycbwynFx5fhxNNADl5M41gJyGECuiitJuTAT9uHdJtiUMvF2nvWdXpjBeyowMy_2RI3Eu/exec" // Google Apps Script Web App URL (Paste URL here)
 };
 
 // State Management
@@ -251,16 +251,21 @@ function togglePaymentNotice(value) {
 }
 
 function handleCheckout(event) {
-    submitWhatsAppOrder(event);
+    submitOrderToSheet(event);
 }
 
 function submitWhatsAppOrder(event) {
+    submitOrderToSheet(event);
+}
+
+function submitOrderToSheet(event) {
     if (event) event.preventDefault();
 
     const name = document.getElementById('custName')?.value.trim() || 'Customer';
     const phone = document.getElementById('custPhone')?.value.trim() || 'Not provided';
     const address = document.getElementById('custAddress')?.value.trim() || 'Direct Pickup';
     const payment = document.getElementById('custPayment')?.value || 'COD';
+    const submitBtn = document.getElementById('checkoutSubmitBtn');
 
     if (sarviCart.length === 0) {
         showToast("Your bag is empty!");
@@ -268,84 +273,90 @@ function submitWhatsAppOrder(event) {
     }
 
     let total = 0;
-    let itemsText = '';
     let itemsCleanList = [];
-    sarviCart.forEach((item, idx) => {
+    sarviCart.forEach((item) => {
         const subtotal = item.price * item.qty;
         total += subtotal;
-        itemsText += `${idx + 1}. *${item.name}* (Qty: ${item.qty}) - ₹${subtotal.toLocaleString()}\n`;
-        itemsCleanList.push(`${item.name} x${item.qty} (₹${subtotal})`);
+        itemsCleanList.push(`${item.name} x${item.qty} (₹${subtotal.toLocaleString()})`);
     });
 
     const orderId = "TS-" + Math.floor(100000 + Math.random() * 900000);
     const timeStamp = new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" });
 
-    // Send order data to Google Sheets (if URL configured)
-    if (window.CONFIG.GOOGLE_SHEETS_URL && window.CONFIG.GOOGLE_SHEETS_URL !== "YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL_HERE") {
-        const orderPayload = {
-            action: "order",
-            timestamp: timeStamp,
-            orderId: "#" + orderId,
-            name: name,
-            phone: phone,
-            address: address,
-            payment: payment,
-            items: itemsCleanList.join(" | "),
-            total: `₹${total.toLocaleString()}`
-        };
+    // Animated Loading Button State
+    if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = `<span class="btn-spinner"></span> PROCESSING ORDER...`;
+    }
 
+    // Send order payload to Google Sheets Web App
+    const orderPayload = {
+        action: "order",
+        timestamp: timeStamp,
+        orderId: "#" + orderId,
+        name: name,
+        phone: phone,
+        address: address,
+        payment: payment,
+        items: itemsCleanList.join(" | "),
+        total: `₹${total.toLocaleString()}`
+    };
+
+    if (window.CONFIG.GOOGLE_SHEETS_URL && window.CONFIG.GOOGLE_SHEETS_URL.startsWith("http")) {
         try {
             fetch(window.CONFIG.GOOGLE_SHEETS_URL, {
                 method: "POST",
                 mode: "no-cors",
                 headers: { "Content-Type": "text/plain" },
                 body: JSON.stringify(orderPayload)
-            }).catch(err => console.log("Google Sheets sync error:", err));
+            }).catch(err => console.log("Google Sheets order sync error:", err));
         } catch (e) {
             console.log("Google Sheets submission error:", e);
         }
     }
 
-    const waText = `🛍️ *NEW ORDER - ${window.CONFIG.STORE_NAME}*\n` +
-                   `==============================\n` +
-                   `*Order Reference:* #${orderId}\n` +
-                   `------------------------------\n` +
-                   `*👤 Customer Details:*\n` +
-                   `• Name: ${name}\n` +
-                   `• Phone (WhatsApp): ${phone}\n` +
-                   `• Address: ${address}\n` +
-                   `• Payment Method: *${payment}*\n` +
-                   `------------------------------\n` +
-                   `*📦 Items Ordered:*\n` +
-                   itemsText +
-                   `------------------------------\n` +
-                   `*💰 Total Amount Payable:* *₹${total.toLocaleString()}*\n` +
-                   `==============================\n` +
-                   `_Please confirm my order and share delivery tracking updates! Thank you._ ✨`;
-
-    const waUrl = `https://api.whatsapp.com/send?phone=${window.CONFIG.WHATSAPP_NUMBER}&text=${encodeURIComponent(waText)}`;
-
-    showToast("Processing Order & Opening WhatsApp... 🚀");
     setTimeout(() => {
-        window.open(waUrl, '_blank');
+        // Restore button state
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = `PLACE ORDER VIA WHATSAPP &rarr;`;
+        }
+
+        // Clear Cart & Form Inputs
         sarviCart = [];
         saveCart();
         updateBadgeCounts();
         renderCartItems();
         closeModals();
-    }, 600);
+
+        const form = document.getElementById('checkoutForm');
+        if (form) form.reset();
+
+        // Show Animated Success Modal
+        showSuccessModal({
+            title: "Order Placed Successfully! 🎉",
+            badgeText: "ORDER RECORDED IN GOOGLE SHEET",
+            message: `Thank you <strong>${name}</strong>! Your order reference is <strong>#${orderId}</strong>.<br>Total Payable: <strong style="color:var(--maroon-deep);">₹${total.toLocaleString()} (${payment})</strong>.<br>Our store executive will review and process your order shortly!`,
+            buttonText: "CONTINUE SHOPPING"
+        });
+    }, 1200);
 }
 
 /* ==========================================================================
-   5. CONTACT FORM WHATSAPP & GOOGLE SHEETS INQUIRY
+   5. CONTACT FORM GOOGLE SHEETS SUBMISSION
    ========================================================================== */
 function sendContactWhatsApp(event) {
+    sendContactFormToSheet(event);
+}
+
+function sendContactFormToSheet(event) {
     if (event) event.preventDefault();
 
     const nameEl = document.getElementById('conName');
     const phoneEl = document.getElementById('conPhone');
     const topicEl = document.getElementById('conTopic');
     const msgEl = document.getElementById('conMsg');
+    const submitBtn = document.getElementById('contactSubmitBtn');
 
     const name = nameEl?.value.trim() || 'Customer';
     const phone = phoneEl?.value.trim() || 'Not provided';
@@ -359,17 +370,22 @@ function sendContactWhatsApp(event) {
 
     const timeStamp = new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" });
 
-    // Send contact form data to Google Sheets (if URL configured)
-    if (window.CONFIG.GOOGLE_SHEETS_URL && window.CONFIG.GOOGLE_SHEETS_URL !== "YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL_HERE") {
-        const contactPayload = {
-            action: "contact",
-            timestamp: timeStamp,
-            name: name,
-            phone: phone,
-            topic: topic,
-            message: msg
-        };
+    // Animated Loading Button State
+    if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = `<span class="btn-spinner"></span> SUBMITTING INQUIRY...`;
+    }
 
+    const contactPayload = {
+        action: "contact",
+        timestamp: timeStamp,
+        name: name,
+        phone: phone,
+        topic: topic,
+        message: msg
+    };
+
+    if (window.CONFIG.GOOGLE_SHEETS_URL && window.CONFIG.GOOGLE_SHEETS_URL.startsWith("http")) {
         try {
             fetch(window.CONFIG.GOOGLE_SHEETS_URL, {
                 method: "POST",
@@ -382,25 +398,65 @@ function sendContactWhatsApp(event) {
         }
     }
 
-    const waText = `💬 *CUSTOMER SUPPORT INQUIRY - ${window.CONFIG.STORE_NAME}*\n` +
-                   `==============================\n` +
-                   `*Name:* ${name}\n` +
-                   `*Phone:* ${phone}\n` +
-                   `*Topic:* ${topic}\n` +
-                   `------------------------------\n` +
-                   `*Message:*\n${msg}\n` +
-                   `==============================`;
-
-    const waUrl = `https://api.whatsapp.com/send?phone=${window.CONFIG.WHATSAPP_NUMBER}&text=${encodeURIComponent(waText)}`;
-
-    showToast("Thank you! Inquiry submitted successfully. ✨");
-    if (nameEl) nameEl.value = '';
-    if (phoneEl) phoneEl.value = '';
-    if (msgEl) msgEl.value = '';
-
     setTimeout(() => {
-        window.open(waUrl, '_blank');
-    }, 600);
+        // Restore button state
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = `SUBMIT FORM`;
+        }
+
+        // Reset Inputs
+        if (nameEl) nameEl.value = '';
+        if (phoneEl) phoneEl.value = '';
+        if (msgEl) msgEl.value = '';
+
+        // Show Animated Success Modal
+        showSuccessModal({
+            title: "Inquiry Received! ✨",
+            badgeText: "SAVED TO GOOGLE SHEET",
+            message: `Thank you <strong>${name}</strong>! Your inquiry regarding <em>"${topic}"</em> has been logged in our Google Sheet database.<br>Our customer desk will contact you soon on <strong>${phone}</strong>.`,
+            buttonText: "BACK TO HOME"
+        });
+    }, 1200);
+}
+
+/* ==========================================================================
+   DYNAMIC ANIMATED SUCCESS MODAL OVERLAY
+   ========================================================================== */
+function showSuccessModal({ title, badgeText, message, buttonText }) {
+    let successModal = document.getElementById('sarviSuccessModal');
+    if (!successModal) {
+        successModal = document.createElement('div');
+        successModal.id = 'sarviSuccessModal';
+        successModal.className = 'modal is-active';
+        successModal.style.zIndex = '9999';
+        document.body.appendChild(successModal);
+    }
+
+    successModal.innerHTML = `
+        <div class="overlay is-active" style="opacity:1; pointer-events:auto;" onclick="closeSuccessModal()"></div>
+        <div class="success-modal-card" style="position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); z-index:10000;">
+            <div class="success-check-circle">
+                <svg viewBox="0 0 24 24" width="36" height="36" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+            </div>
+            <span class="eyebrow" style="color:var(--maroon-deep); letter-spacing:0.1em; font-size:0.75rem; font-weight:700;">${badgeText}</span>
+            <h3 style="font-size:1.6rem; margin:8px 0 12px; color:var(--ink);">${title}</h3>
+            <p style="font-size:0.9rem; color:var(--ink-soft); line-height:1.6; margin-bottom:24px;">${message}</p>
+            <button class="btn btn-fill" style="width:100%; padding:13px;" onclick="closeSuccessModal()">${buttonText || 'OK, GOT IT'}</button>
+        </div>
+    `;
+
+    successModal.classList.add('is-active');
+}
+
+function closeSuccessModal() {
+    const successModal = document.getElementById('sarviSuccessModal');
+    if (successModal) {
+        successModal.classList.remove('is-active');
+        setTimeout(() => successModal.remove(), 250);
+    }
 }
 
 /* ==========================================================================
