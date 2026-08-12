@@ -92,11 +92,12 @@
                 <!-- Desktop Category Filter Buttons -->
                 <div class="filter-tabs desktop-filter-tabs">
                     <button class="filter-btn is-active" data-category="all">All Items (<span
-                            id="catalogTotalCount">8</span>)</button>
+                            id="catalogTotalCount">28</span>)</button>
                     <button class="filter-btn" data-category="neckpeace">NECKPEACE</button>
                     <button class="filter-btn" data-category="bracelet">BRACELET</button>
                     <button class="filter-btn" data-category="earing">EARING</button>
                     <button class="filter-btn" data-category="ring">RING</button>
+                    <button class="filter-btn" data-category="anklet">ANKLET</button>
                     <button class="filter-btn" data-category="festive">FESTIVE JEWELLERY</button>
                 </div>
 
@@ -106,11 +107,12 @@
                         style="font-size:0.85rem; color:var(--ink-soft); font-weight:600; white-space:nowrap;">Category:</label>
                     <select id="catalogCategorySelect"
                         style="width:100%; padding:10px 14px; border:1.5px solid var(--line); border-radius:6px; background:#fff; font-size:0.9rem; font-weight:500; color:var(--ink); font-family:'Jost', sans-serif;">
-                        <option value="all">All Items (8)</option>
+                        <option value="all">All Items (28)</option>
                         <option value="neckpeace">NECKPEACE</option>
                         <option value="bracelet">BRACELET</option>
                         <option value="earing">EARING</option>
                         <option value="ring">RING</option>
+                        <option value="anklet">ANKLET</option>
                         <option value="festive">FESTIVE JEWELLERY</option>
                     </select>
                 </div>
@@ -154,6 +156,7 @@
                 if (catParam === 'fashion' || catParam === 'bracelets' || catParam === 'bracelt' || catParam === 'cuffs') catParam = 'bracelet';
                 if (catParam === 'korean' || catParam === 'earrings') catParam = 'earing';
                 if (catParam === 'rings' || catParam === 'giftsets') catParam = 'ring';
+                if (catParam === 'anklet' || catParam === 'anklets') catParam = 'anklet';
                 if (catParam === 'festive' || catParam === 'festive-jewellery' || catParam === 'festive_jewellery') catParam = 'festive';
                 currentCat = catParam;
                 if (categorySelect) categorySelect.value = currentCat;
