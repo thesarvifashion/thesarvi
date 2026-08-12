@@ -1,0 +1,6 @@
+# Robots.txt for The Sarvi Fashion (https://thesarvi.com)
+User-agent: *
+Allow: /
+
+# Sitemap Location
+Sitemap: https://thesarvi.com/sitemap.xml
