@@ -604,8 +604,26 @@ async function loadDynamicProductsFromSheet() {
         const liveProducts = await response.json();
 
         if (Array.isArray(liveProducts) && liveProducts.length > 0) {
-            THE_SARVI_PRODUCTS.length = 0;
-            THE_SARVI_PRODUCTS.push(...liveProducts);
+            // Smart Merge: Update existing product by ID, or append new products from Sheet
+            liveProducts.forEach(liveItem => {
+                // Ensure image link is valid
+                if (liveItem.image && liveItem.image.includes('ibb.co/') && !liveItem.image.includes('i.ibb.co/')) {
+                    // Help convert ImgBB webpage link to direct image link if possible
+                    liveItem.image = liveItem.image.replace('ibb.co/', 'i.ibb.co/') + '.jpg';
+                }
+
+                const existingIdx = THE_SARVI_PRODUCTS.findIndex(p => p.id === liveItem.id);
+                if (existingIdx !== -1) {
+                    THE_SARVI_PRODUCTS[existingIdx] = {
+                        ...THE_SARVI_PRODUCTS[existingIdx],
+                        ...liveItem,
+                        // Preserve local fallback image if live image is empty
+                        image: liveItem.image || THE_SARVI_PRODUCTS[existingIdx].image
+                    };
+                } else {
+                    THE_SARVI_PRODUCTS.push(liveItem);
+                }
+            });
 
             if (typeof renderBestSellers === 'function') {
                 renderBestSellers();
