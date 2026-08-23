@@ -115,7 +115,7 @@
                         style="font-size:0.85rem; color:var(--ink-soft); font-weight:600; white-space:nowrap;">Category:</label>
                     <select id="catalogCategorySelect"
                         style="width:100%; padding:10px 14px; border:1.5px solid var(--line); border-radius:6px; background:#fff; font-size:0.9rem; font-weight:500; color:var(--ink); font-family:'Jost', sans-serif;">
-                        <option value="all">All Items (28)</option>
+                        <option value="all" id="catalogAllOption">All Items (28)</option>
                         <option value="neckpeace">NECKPEACE</option>
                         <option value="bracelet">BRACELET</option>
                         <option value="earing">EARING</option>
@@ -215,7 +215,9 @@
                 else if (currentSort === 'price-desc') filtered.sort((a, b) => b.price - a.price);
                 else if (currentSort === 'rating') filtered.sort((a, b) => b.rating - a.rating);
 
-                if (totalEl) totalEl.textContent = filtered.length;
+                const allOpt = document.getElementById('catalogAllOption');
+                if (allOpt) allOpt.textContent = `All Items (${THE_SARVI_PRODUCTS.length})`;
+                if (totalEl) totalEl.textContent = (currentCat === 'all') ? THE_SARVI_PRODUCTS.length : filtered.length;
 
                 if (filtered.length === 0) {
                     grid.innerHTML = `<div style="grid-column:1/-1; text-align:center; padding:60px 0; color:var(--ink-soft);">No products found in this category.</div>`;
