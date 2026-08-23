@@ -606,10 +606,17 @@ async function loadDynamicProductsFromSheet() {
         if (Array.isArray(liveProducts) && liveProducts.length > 0) {
             // Smart Merge: Update existing product by ID, or append new products from Sheet
             liveProducts.forEach(liveItem => {
-                // Ensure image link is valid
-                if (liveItem.image && liveItem.image.includes('ibb.co/') && !liveItem.image.includes('i.ibb.co/')) {
-                    // Help convert ImgBB webpage link to direct image link if possible
-                    liveItem.image = liveItem.image.replace('ibb.co/', 'i.ibb.co/') + '.jpg';
+                // Ensure image link is valid and parse HTML snippets if client pastes <a href><img src=...
+                if (liveItem.image) {
+                    let imgStr = String(liveItem.image).trim();
+                    if (imgStr.includes('src=')) {
+                        const match = imgStr.match(/src=["']([^"']+)["']/i);
+                        if (match && match[1]) imgStr = match[1];
+                    }
+                    if (imgStr.includes('ibb.co/') && !imgStr.includes('i.ibb.co/')) {
+                        imgStr = imgStr.replace('ibb.co/', 'i.ibb.co/') + '.jpg';
+                    }
+                    liveItem.image = imgStr;
                 }
 
                 const existingIdx = THE_SARVI_PRODUCTS.findIndex(p => p.id === liveItem.id);
