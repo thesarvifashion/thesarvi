@@ -249,6 +249,10 @@
             }
 
             renderCatalog();
+
+            window.addEventListener('sarviProductsUpdated', () => {
+                renderCatalog();
+            });
         });
 
         function openQuickView(id) {

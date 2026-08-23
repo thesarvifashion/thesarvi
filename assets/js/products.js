@@ -593,6 +593,37 @@ const THE_SARVI_PRODUCTS = [
     }
 ];
 
+// Dynamically fetch live products from Google Sheets (List Product tab)
+async function loadDynamicProductsFromSheet() {
+    const scriptUrl = (window.CONFIG && window.CONFIG.GOOGLE_SHEETS_URL) ? window.CONFIG.GOOGLE_SHEETS_URL : "https://script.google.com/macros/s/AKfycbwynFx5fhxNNADl5M41gJyGECuiitJuTAT9uHdJtiUMvF2nvWdXpjBeyowMy_2RI3Eu/exec";
+    if (!scriptUrl) return;
+
+    try {
+        const response = await fetch(scriptUrl + "?action=getProducts");
+        if (!response.ok) return;
+        const liveProducts = await response.json();
+
+        if (Array.isArray(liveProducts) && liveProducts.length > 0) {
+            THE_SARVI_PRODUCTS.length = 0;
+            THE_SARVI_PRODUCTS.push(...liveProducts);
+
+            if (typeof renderBestSellers === 'function') {
+                renderBestSellers();
+            }
+
+            window.dispatchEvent(new CustomEvent('sarviProductsUpdated'));
+        }
+    } catch (err) {
+        console.warn("Using static fallback products catalog", err);
+    }
+}
+
+if (typeof window !== 'undefined') {
+    window.addEventListener('DOMContentLoaded', () => {
+        loadDynamicProductsFromSheet();
+    });
+}
+
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = THE_SARVI_PRODUCTS;
 }
