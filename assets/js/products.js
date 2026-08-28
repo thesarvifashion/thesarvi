@@ -593,8 +593,62 @@ const THE_SARVI_PRODUCTS = [
     }
 ];
 
-// Dynamically fetch live products from Google Sheets (List Product tab)
+// Process & Merge Products Array Helper
+function processAndMergeProducts(liveProducts) {
+    if (!Array.isArray(liveProducts) || liveProducts.length === 0) return false;
+
+    liveProducts.forEach(liveItem => {
+        // Ensure image link is valid and parse HTML snippets if client pastes <a href><img src=...
+        if (liveItem.image) {
+            let imgStr = String(liveItem.image).trim();
+            if (imgStr.includes('src=')) {
+                const match = imgStr.match(/src=["']([^"']+)["']/i);
+                if (match && match[1]) imgStr = match[1];
+            }
+            if (imgStr.includes('ibb.co/') && !imgStr.includes('i.ibb.co/')) {
+                imgStr = imgStr.replace('ibb.co/', 'i.ibb.co/') + '.jpg';
+            }
+            liveItem.image = imgStr;
+        }
+
+        const existingIdx = THE_SARVI_PRODUCTS.findIndex(p => p.id === liveItem.id);
+        if (existingIdx !== -1) {
+            THE_SARVI_PRODUCTS[existingIdx] = {
+                ...THE_SARVI_PRODUCTS[existingIdx],
+                ...liveItem,
+                // Preserve local fallback image if live image is empty
+                image: liveItem.image || THE_SARVI_PRODUCTS[existingIdx].image
+            };
+        } else {
+            // Prepend new sheet products to the very top of the list (Newest First)
+            THE_SARVI_PRODUCTS.unshift(liveItem);
+        }
+    });
+
+    if (typeof renderBestSellers === 'function') {
+        renderBestSellers();
+    }
+
+    window.dispatchEvent(new CustomEvent('sarviProductsUpdated'));
+    return true;
+}
+
+// Dynamically fetch live products from Google Sheets with instant 0ms localStorage Cache
 async function loadDynamicProductsFromSheet() {
+    const CACHE_KEY = "theSarviDynamicProductsCache";
+
+    // 1. Instant 0ms Load from Local Storage Cache (Zero Lag, Zero Flicker)
+    try {
+        const cachedStr = localStorage.getItem(CACHE_KEY);
+        if (cachedStr) {
+            const cachedProducts = JSON.parse(cachedStr);
+            processAndMergeProducts(cachedProducts);
+        }
+    } catch (e) {
+        console.warn("Could not load cached products", e);
+    }
+
+    // 2. Background Silent Revalidation from Google Sheets
     const scriptUrl = (window.CONFIG && window.CONFIG.GOOGLE_SHEETS_URL) ? window.CONFIG.GOOGLE_SHEETS_URL : "https://script.google.com/macros/s/AKfycbwynFx5fhxNNADl5M41gJyGECuiitJuTAT9uHdJtiUMvF2nvWdXpjBeyowMy_2RI3Eu/exec";
     if (!scriptUrl) return;
 
@@ -604,40 +658,16 @@ async function loadDynamicProductsFromSheet() {
         const liveProducts = await response.json();
 
         if (Array.isArray(liveProducts) && liveProducts.length > 0) {
-            // Smart Merge: Update existing product by ID, or append new products from Sheet
-            liveProducts.forEach(liveItem => {
-                // Ensure image link is valid and parse HTML snippets if client pastes <a href><img src=...
-                if (liveItem.image) {
-                    let imgStr = String(liveItem.image).trim();
-                    if (imgStr.includes('src=')) {
-                        const match = imgStr.match(/src=["']([^"']+)["']/i);
-                        if (match && match[1]) imgStr = match[1];
-                    }
-                    if (imgStr.includes('ibb.co/') && !imgStr.includes('i.ibb.co/')) {
-                        imgStr = imgStr.replace('ibb.co/', 'i.ibb.co/') + '.jpg';
-                    }
-                    liveItem.image = imgStr;
-                }
+            const newStr = JSON.stringify(liveProducts);
+            const oldStr = localStorage.getItem(CACHE_KEY);
 
-                const existingIdx = THE_SARVI_PRODUCTS.findIndex(p => p.id === liveItem.id);
-                if (existingIdx !== -1) {
-                    THE_SARVI_PRODUCTS[existingIdx] = {
-                        ...THE_SARVI_PRODUCTS[existingIdx],
-                        ...liveItem,
-                        // Preserve local fallback image if live image is empty
-                        image: liveItem.image || THE_SARVI_PRODUCTS[existingIdx].image
-                    };
-                } else {
-                    // Prepend new sheet products to the very top of the list (Newest First)
-                    THE_SARVI_PRODUCTS.unshift(liveItem);
-                }
-            });
+            // Save fresh data to local cache
+            localStorage.setItem(CACHE_KEY, newStr);
 
-            if (typeof renderBestSellers === 'function') {
-                renderBestSellers();
+            // If data changed or first visit, update UI silently
+            if (newStr !== oldStr) {
+                processAndMergeProducts(liveProducts);
             }
-
-            window.dispatchEvent(new CustomEvent('sarviProductsUpdated'));
         }
     } catch (err) {
         console.warn("Using static fallback products catalog", err);

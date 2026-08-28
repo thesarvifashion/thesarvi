@@ -1878,6 +1878,21 @@ footer ul a:hover {
         gap: 14px;
     }
 
+    .header-left {
+        order: 3;
+        justify-self: end;
+    }
+
+    .brand {
+        order: 2;
+        justify-self: center;
+    }
+
+    .header-actions {
+        order: 1;
+        justify-self: start;
+    }
+
     .desktop-nav-inline {
         display: none;
     }
